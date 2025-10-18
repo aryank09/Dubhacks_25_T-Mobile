@@ -67,6 +67,23 @@ echo "Configuring GPS..."
 sudo systemctl enable gpsd
 sudo systemctl start gpsd
 
+# Install Ollama (local LLM)
+echo "Installing Ollama for local AI..."
+if ! command -v ollama &> /dev/null; then
+    curl -fsSL https://ollama.com/install.sh | sh
+    echo "Ollama installed successfully!"
+else
+    echo "Ollama already installed"
+fi
+
+# Start Ollama service
+sudo systemctl enable ollama 2>/dev/null || true
+sudo systemctl start ollama 2>/dev/null || true
+
+# Download a lightweight model for Raspberry Pi
+echo "Downloading AI model (this may take a few minutes)..."
+ollama pull phi 2>/dev/null || ollama pull tinyllama || echo "Model download skipped - will download on first use"
+
 # Install Python packages
 echo "Installing Python dependencies..."
 pip3 install --upgrade pip

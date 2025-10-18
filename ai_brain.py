@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class AIBrain:
-    def __init__(self, service='openai'):
+    def __init__(self, service='ollama'):
         """
         Initialize AI brain with specified service
         Args:
-            service: 'openai' or 'anthropic'
+            service: 'openai', 'anthropic', 'gemini', or 'ollama' (local, FREE!)
         """
         self.service = service
         self.conversation_history = []
@@ -36,7 +36,17 @@ Your role is to:
 
 Keep responses brief and to the point. Users rely on audio feedback, so clarity is crucial."""
         
-        if service == 'openai':
+        if service == 'ollama':
+            # Local LLM - works offline, no API key needed!
+            try:
+                import ollama
+                self.client = ollama
+                logger.info("Ollama local LLM initialized")
+            except ImportError:
+                logger.error("Ollama library not installed. Run: pip install ollama")
+                self.client = None
+        
+        elif service == 'openai':
             try:
                 from openai import OpenAI
                 api_key = os.getenv('OPENAI_API_KEY')
@@ -62,6 +72,21 @@ Keep responses brief and to the point. Users rely on audio feedback, so clarity 
                     logger.info("Anthropic client initialized")
             except ImportError:
                 logger.error("Anthropic library not installed")
+                self.client = None
+        
+        elif service == 'gemini':
+            try:
+                import google.generativeai as genai
+                api_key = os.getenv('GEMINI_API_KEY')
+                if not api_key:
+                    logger.warning("Gemini API key not found. AI features will be limited.")
+                    self.client = None
+                else:
+                    genai.configure(api_key=api_key)
+                    self.client = genai.GenerativeModel('gemini-pro')
+                    logger.info("Google Gemini initialized")
+            except ImportError:
+                logger.error("Google Generative AI library not installed")
                 self.client = None
     
     def process_query(self, user_input: str, context: Optional[Dict] = None) -> str:
@@ -89,10 +114,14 @@ Keep responses brief and to the point. Users rely on audio feedback, so clarity 
         })
         
         try:
-            if self.service == 'openai':
+            if self.service == 'ollama':
+                response = self._query_ollama()
+            elif self.service == 'openai':
                 response = self._query_openai()
             elif self.service == 'anthropic':
                 response = self._query_anthropic()
+            elif self.service == 'gemini':
+                response = self._query_gemini()
             else:
                 response = "AI service not configured properly."
             
@@ -111,6 +140,38 @@ Keep responses brief and to the point. Users rely on audio feedback, so clarity 
         except Exception as e:
             logger.error(f"Error processing query with AI: {e}")
             return self._fallback_response(user_input, context)
+    
+    def _query_ollama(self) -> str:
+        """Query local Ollama LLM (offline, free!)"""
+        # Format messages for Ollama
+        messages = [{"role": "system", "content": self.system_prompt}]
+        messages.extend(self.conversation_history)
+        
+        # Use phi or llama model (lightweight for Pi)
+        try:
+            response = self.client.chat(
+                model='phi',  # or 'llama2', 'mistral', 'tinyllama'
+                messages=messages,
+                options={
+                    'temperature': 0.7,
+                    'num_predict': 100,  # Keep responses short
+                }
+            )
+            return response['message']['content'].strip()
+        except Exception as e:
+            logger.error(f"Ollama error: {e}")
+            # Try alternative model
+            try:
+                response = self.client.chat(
+                    model='tinyllama',  # Smallest model, fastest
+                    messages=messages,
+                )
+                return response['message']['content'].strip()
+            except:
+                return self._fallback_response(
+                    self.conversation_history[-1]['content'] if self.conversation_history else "",
+                    None
+                )
     
     def _query_openai(self) -> str:
         """Query OpenAI API"""
@@ -136,6 +197,17 @@ Keep responses brief and to the point. Users rely on audio feedback, so clarity 
         )
         
         return response.content[0].text.strip()
+    
+    def _query_gemini(self) -> str:
+        """Query Google Gemini API"""
+        # Format conversation for Gemini
+        prompt = f"{self.system_prompt}\n\n"
+        for msg in self.conversation_history:
+            role = "User" if msg["role"] == "user" else "Assistant"
+            prompt += f"{role}: {msg['content']}\n"
+        
+        response = self.client.generate_content(prompt)
+        return response.text.strip()
     
     def _format_context(self, context: Dict) -> str:
         """Format context dictionary into readable string"""

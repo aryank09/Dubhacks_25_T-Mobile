@@ -39,7 +39,7 @@ class NavigationAssistant:
         
         # Initialize components
         self.voice = VoiceAssistant(use_gtts=False)  # Use offline TTS
-        self.ai = AIBrain(service='openai')  # Can switch to 'anthropic'
+        self.ai = AIBrain(service='ollama')  # Local LLM - no API needed!
         self.navigation = NavigationSystem()
         
         # Optional components
