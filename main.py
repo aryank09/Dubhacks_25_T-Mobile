@@ -7,7 +7,7 @@ Provides real-time turn-by-turn voice directions using GPS updates every 5 secon
 import sys
 import time
 from text_maps import TextMaps
-from TTS import say
+from TTS import say, get_yes_no_confirmation, listen_for_input
 
 
 class LiveVoiceNavigation:
@@ -40,6 +40,84 @@ class LiveVoiceNavigation:
             
         except Exception as e:
             print(f"⚠️  TTS Error: {e}")
+    
+    def confirm_destination(self, destination: str) -> bool:
+        """
+        Confirm destination with voice input
+        
+        Args:
+            destination: The destination address to confirm
+            
+        Returns:
+            bool: True if confirmed, False if not confirmed or error
+        """
+        print(f"\n{'='*60}")
+        print(f"🎤 VOICE DESTINATION CONFIRMATION")
+        print(f"{'='*60}")
+        print(f"📍 Destination: {destination}")
+        print(f"{'='*60}\n")
+        
+        # Ask for confirmation with voice
+        confirmation_question = f"I heard your destination as {destination}. Is this correct? Please say yes or no."
+        
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            print(f"\n🔄 Confirmation attempt {attempt + 1}/{max_attempts}")
+            
+            response = get_yes_no_confirmation(confirmation_question, timeout=15)
+            
+            if response is True:
+                print("✅ Destination confirmed!")
+                self.speak("Great! Starting navigation to " + destination)
+                return True
+            elif response is False:
+                print("❌ Destination not confirmed")
+                self.speak("I understand. Please try again with a different destination.")
+                return False
+            else:
+                print("⚠️  Could not understand your response")
+                if attempt < max_attempts - 1:
+                    self.speak("I didn't catch that. Please say yes or no.")
+                else:
+                    self.speak("I'm having trouble understanding. Please try again later.")
+                    return False
+        
+        return False
+    
+    def get_destination_by_voice(self) -> str:
+        """
+        Get destination from voice input
+        
+        Returns:
+            str: The destination address, or None if no valid input
+        """
+        print(f"\n{'='*60}")
+        print(f"🎤 VOICE DESTINATION INPUT")
+        print(f"{'='*60}")
+        print("Please speak your destination address clearly.")
+        print(f"{'='*60}\n")
+        
+        # Ask for destination
+        self.speak("Please tell me your destination address.")
+        
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            print(f"\n🔄 Voice input attempt {attempt + 1}/{max_attempts}")
+            
+            destination = listen_for_input(timeout=15, phrase_time_limit=10)
+            
+            if destination and len(destination.strip()) > 0:
+                print(f"🎤 Heard destination: {destination}")
+                return destination.strip()
+            else:
+                print("⚠️  No destination heard or destination too short")
+                if attempt < max_attempts - 1:
+                    self.speak("I didn't hear a destination. Please try again.")
+                else:
+                    self.speak("I'm having trouble hearing your destination. Please try again later.")
+                    return None
+        
+        return None
     
     def format_instruction_for_speech(self, step: dict) -> str:
         """
@@ -98,6 +176,11 @@ class LiveVoiceNavigation:
         # Initialize TTS
         self.init_tts()
         
+        # Confirm destination with voice
+        if not self.confirm_destination(destination):
+            print("❌ Destination not confirmed. Exiting navigation.")
+            return
+
         # Get destination coordinates
         print("🔍 Finding destination...")
         dest_coords = self.navigator.geocode(destination)
@@ -105,7 +188,7 @@ class LiveVoiceNavigation:
             print(f"❌ Could not find destination: {destination}")
             self.speak(f"Error: Could not find destination {destination}")
             return
-        
+
         print(f"✓ Destination: {dest_coords[0]:.4f}, {dest_coords[1]:.4f}\n")
         
         # Get initial location
@@ -234,6 +317,9 @@ def main():
     print("🚶 🔊 LIVE VOICE-GUIDED WALKING NAVIGATION")
     print("="*60 + "\n")
     
+    # Create navigation system
+    nav_system = LiveVoiceNavigation()
+    
     # Get destination
     args = sys.argv[1:]
     
@@ -242,17 +328,34 @@ def main():
         destination = args[0]
         print(f"📍 Using destination from command line: {destination}")
     else:
-        # Interactive mode
+        # Interactive mode - ask user for input method
         print("🚶 Welcome to Live Voice-Guided Walking Navigation!")
-        print("Enter your destination:\n")
-        destination = input("Destination: ").strip()
-        if not destination:
-            print("❌ Destination cannot be empty")
-            return
-        print(f"📍 Destination set to: {destination}")
+        print("\nHow would you like to enter your destination?")
+        print("1. Type destination")
+        print("2. Speak destination")
+        
+        while True:
+            choice = input("\nEnter choice (1 or 2): ").strip()
+            if choice == "1":
+                destination = input("Destination: ").strip()
+                if not destination:
+                    print("❌ Destination cannot be empty")
+                    continue
+                print(f"📍 Destination set to: {destination}")
+                break
+            elif choice == "2":
+                # Initialize TTS for voice input
+                nav_system.init_tts()
+                destination = nav_system.get_destination_by_voice()
+                if not destination:
+                    print("❌ Could not get destination from voice input")
+                    return
+                print(f"📍 Destination set to: {destination}")
+                break
+            else:
+                print("❌ Please enter 1 or 2")
     
-    # Create navigation system and run
-    nav_system = LiveVoiceNavigation()
+    # Run navigation
     nav_system.run_live_navigation(destination)
 
 
