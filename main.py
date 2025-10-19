@@ -6,8 +6,8 @@ Provides real-time turn-by-turn voice directions using GPS updates every 5 secon
 
 import sys
 import time
-import pyttsx3
 from text_maps import TextMaps
+from TTS import say
 
 
 class LiveVoiceNavigation:
@@ -16,18 +16,13 @@ class LiveVoiceNavigation:
     def __init__(self):
         """Initialize the navigation system"""
         self.navigator = TextMaps()  # Permanently set to walking
-        self.engine = None
         self.last_spoken_step = -1
         self.update_interval = 5  # Update every 5 seconds
         
     def init_tts(self):
         """Initialize TTS engine"""
-        if not self.engine:
-            print("🔊 Initializing TTS engine...")
-            self.engine = pyttsx3.init()
-            self.engine.setProperty('rate', 150)  # Speed of speech
-            self.engine.setProperty('volume', 0.9)  # Volume level
-            print("✅ TTS engine ready\n")
+        print("🔊 Initializing TTS engine...")
+        print("✅ TTS engine ready\n")
     
     def speak(self, text: str, display: bool = True):
         """
@@ -41,8 +36,7 @@ class LiveVoiceNavigation:
             if display:
                 print(f"\n🔊 SPEAKING: {text}\n")
             
-            self.engine.say(text)
-            self.engine.runAndWait()
+            say(text)
             
         except Exception as e:
             print(f"⚠️  TTS Error: {e}")
@@ -246,13 +240,16 @@ def main():
     if len(args) >= 1:
         # Use command line argument
         destination = args[0]
+        print(f"📍 Using destination from command line: {destination}")
     else:
         # Interactive mode
+        print("🚶 Welcome to Live Voice-Guided Walking Navigation!")
         print("Enter your destination:\n")
         destination = input("Destination: ").strip()
         if not destination:
             print("❌ Destination cannot be empty")
             return
+        print(f"📍 Destination set to: {destination}")
     
     # Create navigation system and run
     nav_system = LiveVoiceNavigation()

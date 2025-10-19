@@ -2,7 +2,37 @@ import ollama
 import pyttsx3
 import time
 
-# --- Part 1: Define the Ollama Text Generator ---
+# --- Part 1: Simple TTS function for basic text-to-speech ---
+def say(text):
+    """
+    Simple function to speak text using TTS without Ollama.
+    This is a lightweight function for basic text-to-speech needs.
+    
+    Args:
+        text (str): The text to speak
+        
+    Returns:
+        bool: True if successful, False if error occurred
+    """
+    try:
+        # Initialize pyttsx3 TTS engine
+        engine = pyttsx3.init()
+        
+        # Set properties (optional)
+        engine.setProperty('rate', 150)  # Speed of speech
+        engine.setProperty('volume', 0.9)  # Volume level (0.0 to 1.0)
+        
+        # Speak the text
+        engine.say(text)
+        engine.runAndWait()
+        
+        return True
+        
+    except Exception as e:
+        print(f"TTS Error: {e}")
+        return False
+
+# --- Part 2: Define the Ollama Text Generator ---
 def get_ollama_response(prompt):
     """
     A generator function that yields text chunks (tokens) 
@@ -29,7 +59,7 @@ def get_ollama_response(prompt):
         print("Please ensure the Ollama application is running and you have pulled the model.")
         yield "An error occurred with Ollama."
 
-# --- Part 2: Main TTS function for export ---
+# --- Part 3: Main TTS function for export ---
 def speak_with_ollama(prompt):
     """
     Main function to handle TTS with Ollama integration.
@@ -74,7 +104,7 @@ def speak_with_ollama(prompt):
             print(f"An unexpected error occurred: {e}")
         return False
 
-# --- Part 3: Legacy main function for testing ---
+# --- Part 4: Legacy main function for testing ---
 def main():
     # Define your prompt
     prompt = "In three short sentences, explain why the sky is blue."
