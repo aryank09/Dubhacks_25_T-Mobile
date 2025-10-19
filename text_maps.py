@@ -123,17 +123,62 @@ class TextMaps:
             print(f"⚠️  Error getting browser location: {e}")
             return None
     
-    def get_current_location(self, use_gps: bool = True) -> Optional[Tuple[float, float]]:
+    def get_current_location_from_server(self, server_url: str = "http://localhost:5000") -> Optional[Tuple[float, float]]:
         """
-        Get current location using GPS or IP-based geolocation
+        Get current location from GPS server (for Raspberry Pi setup)
         
         Args:
-            use_gps: If True, try to use device GPS first
+            server_url: URL of the GPS server
         
         Returns:
             Tuple of (latitude, longitude) or None if not found
         """
         try:
+            response = requests.get(f"{server_url}/location", timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                lat = data['latitude']
+                lon = data['longitude']
+                age_seconds = data.get('age_seconds', 0)
+                
+                print(f"📍 Got location from server: {lat:.4f}, {lon:.4f} (age: {age_seconds:.1f}s)")
+                
+                # Check if location is fresh (less than 30 seconds old)
+                if age_seconds and age_seconds > 30:
+                    print(f"⚠️  Location is {age_seconds:.1f} seconds old, may not be accurate")
+                
+                return (lat, lon)
+            else:
+                print(f"❌ Server returned status {response.status_code}")
+                return None
+                
+        except requests.exceptions.ConnectionError:
+            print("❌ Could not connect to GPS server")
+            return None
+        except Exception as e:
+            print(f"⚠️  Error getting location from server: {e}")
+            return None
+
+    def get_current_location(self, use_gps: bool = True, use_server: bool = False, server_url: str = "http://localhost:5000") -> Optional[Tuple[float, float]]:
+        """
+        Get current location using GPS, server, or IP-based geolocation
+        
+        Args:
+            use_gps: If True, try to use device GPS first
+            use_server: If True, try to get location from GPS server first
+            server_url: URL of the GPS server (if use_server is True)
+        
+        Returns:
+            Tuple of (latitude, longitude) or None if not found
+        """
+        try:
+            if use_server:
+                # Try server-based GPS (for Raspberry Pi setup)
+                location = self.get_current_location_from_server(server_url)
+                if location:
+                    return location
+            
             if use_gps:
                 # Try browser-based GPS (most accurate)
                 location = self.get_current_location_from_browser()

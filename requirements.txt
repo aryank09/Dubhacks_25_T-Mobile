@@ -1,5 +1,6 @@
 requests>=2.31.0
 geocoder>=1.38.1
+flask>=2.3.0
 
 #TTS and Speech Recognition
 pyttsx3>=2.90

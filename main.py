@@ -13,11 +13,19 @@ from TTS import say, get_yes_no_confirmation, listen_for_input
 class LiveVoiceNavigation:
     """Live navigation with TTS voice guidance"""
     
-    def __init__(self):
-        """Initialize the navigation system"""
+    def __init__(self, use_server_gps: bool = False, server_url: str = "http://localhost:5000"):
+        """
+        Initialize the navigation system
+        
+        Args:
+            use_server_gps: If True, get GPS from server instead of local GPS
+            server_url: URL of the GPS server (if use_server_gps is True)
+        """
         self.navigator = TextMaps()  # Permanently set to walking
         self.last_spoken_step = -1
         self.update_interval = 5  # Update every 5 seconds
+        self.use_server_gps = use_server_gps
+        self.server_url = server_url
         
     def init_tts(self):
         """Initialize TTS engine"""
@@ -192,11 +200,20 @@ class LiveVoiceNavigation:
         print(f"✓ Destination: {dest_coords[0]:.4f}, {dest_coords[1]:.4f}\n")
         
         # Get initial location
-        print("📍 Detecting your current location...")
-        current_location = self.navigator.get_current_location()
+        if self.use_server_gps:
+            print("📍 Getting current location from GPS server...")
+            current_location = self.navigator.get_current_location(use_server=True, server_url=self.server_url)
+        else:
+            print("📍 Detecting your current location...")
+            current_location = self.navigator.get_current_location()
+        
         if not current_location:
-            print("❌ Could not detect current location")
-            self.speak("Error: Could not detect your current location")
+            if self.use_server_gps:
+                print("❌ Could not get location from GPS server")
+                self.speak("Error: Could not get location from GPS server. Make sure the computer is sending GPS coordinates.")
+            else:
+                print("❌ Could not detect current location")
+                self.speak("Error: Could not detect your current location")
             return
         
         print(f"✓ Current location: {current_location[0]:.4f}, {current_location[1]:.4f}\n")
@@ -241,9 +258,16 @@ class LiveVoiceNavigation:
                 
                 # Get fresh GPS location
                 print(f"\n🔄 Update #{iteration} - Getting current location...")
-                current_location = self.navigator.get_current_location()
+                if self.use_server_gps:
+                    current_location = self.navigator.get_current_location(use_server=True, server_url=self.server_url)
+                else:
+                    current_location = self.navigator.get_current_location()
+                
                 if not current_location:
-                    print("⚠️  Could not update location, retrying...")
+                    if self.use_server_gps:
+                        print("⚠️  Could not get location from GPS server, retrying...")
+                    else:
+                        print("⚠️  Could not update location, retrying...")
                     time.sleep(self.update_interval)
                     continue
                 
@@ -317,12 +341,38 @@ def main():
     print("🚶 🔊 LIVE VOICE-GUIDED WALKING NAVIGATION")
     print("="*60 + "\n")
     
-    # Create navigation system
-    nav_system = LiveVoiceNavigation()
+    # Check for server GPS mode
+    use_server_gps = False
+    server_url = "http://localhost:5000"
     
-    # Get destination
     args = sys.argv[1:]
+    if "--server-gps" in args:
+        use_server_gps = True
+        # Remove the flag from args
+        args = [arg for arg in args if arg != "--server-gps"]
+        
+        # Check for custom server URL
+        if "--server-url" in args:
+            try:
+                url_index = args.index("--server-url")
+                if url_index + 1 < len(args):
+                    server_url = args[url_index + 1]
+                    # Remove the URL flag and value from args
+                    args = [arg for i, arg in enumerate(args) if i not in [url_index, url_index + 1]]
+            except (ValueError, IndexError):
+                pass
     
+    # Create navigation system
+    if use_server_gps:
+        print(f"🌐 Using server GPS mode")
+        print(f"📡 Server URL: {server_url}")
+        print("🖥️  Make sure the GPS server is running and computer is sending coordinates\n")
+        nav_system = LiveVoiceNavigation(use_server_gps=True, server_url=server_url)
+    else:
+        print("📍 Using local GPS mode")
+        nav_system = LiveVoiceNavigation()
+    
+    # Get destination (args already processed above)
     if len(args) >= 1:
         # Use command line argument
         destination = args[0]
