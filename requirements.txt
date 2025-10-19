@@ -8,5 +8,8 @@ pyaudio>=0.2.11
 SpeechRecognition>=3.10.0
 
 # Installation notes:
+#for raspberry pi: because its externally manager and debian you need virtual env for python
 # For macOS: brew install portaudio (required for pyaudio)
 # Then: pip install -r requirements.txt
+#ollama linux: curl -fsSL https://ollama.com/install.sh | sh
+#ollama pull gemma:2b
