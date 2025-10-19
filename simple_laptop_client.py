@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Laptop Client for HINT System
-Sends location data to Firebase and listens for commands from the Pi Router
+Simple Laptop Client for HINT System
+Runs in background without interactive prompts
 """
 
 import time
@@ -13,11 +13,11 @@ from firebase_config import MessageTypes
 from text_maps import TextMaps
 from TTS import say
 
-class LaptopClient:
-    """Laptop Client for HINT system"""
+class SimpleLaptopClient:
+    """Simple Laptop Client that runs in background"""
     
     def __init__(self):
-        """Initialize the Laptop Client"""
+        """Initialize the Simple Laptop Client"""
         self.firebase = FirebaseClient()
         self.navigator = TextMaps()
         self.is_running = False
@@ -25,13 +25,14 @@ class LaptopClient:
         self.command_thread = None
         self.update_interval = 5  # Send location every 5 seconds
         self.current_location = None
+        self.last_processed_command = None  # Track last command to avoid duplicates
         
-        print("💻 HINT Laptop Client Initialized")
+        print("💻 Simple HINT Laptop Client Initialized")
         print("=" * 50)
     
     def start_client(self) -> bool:
         """
-        Start the Laptop Client service
+        Start the Simple Laptop Client service
         
         Returns:
             bool: True if started successfully
@@ -40,7 +41,7 @@ class LaptopClient:
             print("❌ Firebase not ready. Please check configuration.")
             return False
         
-        print("🚀 Starting HINT Laptop Client...")
+        print("🚀 Starting Simple HINT Laptop Client...")
         
         # Send initial status
         self.firebase.send_status_update("client", "starting", {
@@ -57,7 +58,7 @@ class LaptopClient:
         self.command_thread = threading.Thread(target=self._command_listening_loop, daemon=True)
         self.command_thread.start()
         
-        print("✅ HINT Laptop Client started")
+        print("✅ Simple HINT Laptop Client started")
         print(f"📍 Sending location updates every {self.update_interval} seconds")
         print("👂 Listening for commands from Pi Router")
         print("Press Ctrl+C to stop\n")
@@ -81,9 +82,7 @@ class LaptopClient:
                     # Only send if location changed significantly (more than 10 meters)
                     should_send = True
                     if last_sent_location:
-                        from text_maps import TextMaps
-                        temp_nav = TextMaps()
-                        distance = temp_nav.calculate_distance(last_sent_location, current_location)
+                        distance = self.navigator.calculate_distance(last_sent_location, current_location)
                         should_send = distance > 10  # Only send if moved more than 10 meters
                     
                     if should_send:
@@ -124,7 +123,11 @@ class LaptopClient:
                 command_data = self.firebase.get_latest_command()
                 
                 if command_data:
-                    self._process_command(command_data)
+                    # Check if this is a new command (avoid processing duplicates)
+                    command_id = f"{command_data.get('type', '')}_{command_data.get('timestamp', 0)}"
+                    if command_id != self.last_processed_command:
+                        self._process_command(command_data)
+                        self.last_processed_command = command_id
                 
                 # Check for commands every second
                 time.sleep(1)
@@ -232,31 +235,9 @@ class LaptopClient:
             if message:
                 say(message)
     
-    def send_manual_location(self, latitude: float, longitude: float) -> bool:
-        """
-        Manually send location update (for testing)
-        
-        Args:
-            latitude: GPS latitude
-            longitude: GPS longitude
-            
-        Returns:
-            bool: True if successful
-        """
-        return self.firebase.send_location_update(latitude, longitude)
-    
-    def get_current_location(self) -> Optional[Tuple[float, float]]:
-        """
-        Get current location
-        
-        Returns:
-            Current (lat, lng) tuple or None
-        """
-        return self.current_location
-    
     def stop_client(self) -> None:
-        """Stop the Laptop Client service"""
-        print("\n🛑 Stopping HINT Laptop Client...")
+        """Stop the Simple Laptop Client service"""
+        print("\n🛑 Stopping Simple HINT Laptop Client...")
         self.is_running = False
         
         # Wait for threads to finish
@@ -272,15 +253,15 @@ class LaptopClient:
         # Close Firebase connection
         self.firebase.close()
         
-        print("✅ HINT Laptop Client stopped")
+        print("✅ Simple HINT Laptop Client stopped")
 
 def main():
-    """Main function for Laptop Client"""
-    print("💻 HINT Laptop Client")
+    """Main function for Simple Laptop Client"""
+    print("💻 Simple HINT Laptop Client")
     print("=" * 50)
     
     # Create and start client
-    client = LaptopClient()
+    client = SimpleLaptopClient()
     
     if not client.start_client():
         print("❌ Failed to start client")

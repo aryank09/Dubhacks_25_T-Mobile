@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Laptop Client for HINT System
-Sends location data to Firebase and listens for commands from the Pi Router
+Enhanced Laptop Client for HINT System
+Integrates voice prompting features from main.py with Firebase communication
 """
 
 import time
@@ -11,13 +11,13 @@ from typing import Optional, Tuple
 from firebase_client import FirebaseClient
 from firebase_config import MessageTypes
 from text_maps import TextMaps
-from TTS import say
+from TTS import say, get_yes_no_confirmation, listen_for_input
 
-class LaptopClient:
-    """Laptop Client for HINT system"""
+class EnhancedLaptopClient:
+    """Enhanced Laptop Client with voice prompting capabilities"""
     
     def __init__(self):
-        """Initialize the Laptop Client"""
+        """Initialize the Enhanced Laptop Client"""
         self.firebase = FirebaseClient()
         self.navigator = TextMaps()
         self.is_running = False
@@ -25,13 +25,14 @@ class LaptopClient:
         self.command_thread = None
         self.update_interval = 5  # Send location every 5 seconds
         self.current_location = None
+        self.last_processed_command = None  # Track last command to avoid duplicates
         
-        print("💻 HINT Laptop Client Initialized")
+        print("💻 Enhanced HINT Laptop Client Initialized")
         print("=" * 50)
     
     def start_client(self) -> bool:
         """
-        Start the Laptop Client service
+        Start the Enhanced Laptop Client service
         
         Returns:
             bool: True if started successfully
@@ -40,12 +41,12 @@ class LaptopClient:
             print("❌ Firebase not ready. Please check configuration.")
             return False
         
-        print("🚀 Starting HINT Laptop Client...")
+        print("🚀 Starting Enhanced HINT Laptop Client...")
         
         # Send initial status
         self.firebase.send_status_update("client", "starting", {
             "update_interval": self.update_interval,
-            "capabilities": ["location_tracking", "voice_output", "command_processing"]
+            "capabilities": ["location_tracking", "voice_output", "command_processing", "voice_input"]
         })
         
         # Start location tracking
@@ -57,9 +58,10 @@ class LaptopClient:
         self.command_thread = threading.Thread(target=self._command_listening_loop, daemon=True)
         self.command_thread.start()
         
-        print("✅ HINT Laptop Client started")
+        print("✅ Enhanced HINT Laptop Client started")
         print(f"📍 Sending location updates every {self.update_interval} seconds")
         print("👂 Listening for commands from Pi Router")
+        print("🎤 Voice input capabilities enabled")
         print("Press Ctrl+C to stop\n")
         
         return True
@@ -81,9 +83,7 @@ class LaptopClient:
                     # Only send if location changed significantly (more than 10 meters)
                     should_send = True
                     if last_sent_location:
-                        from text_maps import TextMaps
-                        temp_nav = TextMaps()
-                        distance = temp_nav.calculate_distance(last_sent_location, current_location)
+                        distance = self.navigator.calculate_distance(last_sent_location, current_location)
                         should_send = distance > 10  # Only send if moved more than 10 meters
                     
                     if should_send:
@@ -124,7 +124,11 @@ class LaptopClient:
                 command_data = self.firebase.get_latest_command()
                 
                 if command_data:
-                    self._process_command(command_data)
+                    # Check if this is a new command (avoid processing duplicates)
+                    command_id = f"{command_data.get('type', '')}_{command_data.get('timestamp', 0)}"
+                    if command_id != self.last_processed_command:
+                        self._process_command(command_data)
+                        self.last_processed_command = command_id
                 
                 # Check for commands every second
                 time.sleep(1)
@@ -232,6 +236,84 @@ class LaptopClient:
             if message:
                 say(message)
     
+    def get_destination_by_voice(self) -> str:
+        """
+        Get destination from voice input (from main.py)
+        
+        Returns:
+            str: The destination address, or None if no valid input
+        """
+        print(f"\n{'='*60}")
+        print(f"🎤 VOICE DESTINATION INPUT")
+        print(f"{'='*60}")
+        print("Please speak your destination address clearly.")
+        print(f"{'='*60}\n")
+        
+        # Ask for destination
+        say("Please tell me your destination address.")
+        
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            print(f"\n🔄 Voice input attempt {attempt + 1}/{max_attempts}")
+            
+            destination = listen_for_input(timeout=15, phrase_time_limit=10)
+            
+            if destination and len(destination.strip()) > 0:
+                print(f"🎤 Heard destination: {destination}")
+                return destination.strip()
+            else:
+                print("⚠️  No destination heard or destination too short")
+                if attempt < max_attempts - 1:
+                    say("I didn't hear a destination. Please try again.")
+                else:
+                    say("I'm having trouble hearing your destination. Please try again later.")
+                    return None
+        
+        return None
+    
+    def confirm_destination(self, destination: str) -> bool:
+        """
+        Confirm destination with voice input (from main.py)
+        
+        Args:
+            destination: The destination address to confirm
+            
+        Returns:
+            bool: True if confirmed, False if not confirmed or error
+        """
+        print(f"\n{'='*60}")
+        print(f"🎤 VOICE DESTINATION CONFIRMATION")
+        print(f"{'='*60}")
+        print(f"📍 Destination: {destination}")
+        print(f"{'='*60}\n")
+        
+        # Ask for confirmation with voice
+        confirmation_question = f"I heard your destination as {destination}. Is this correct? Please say yes or no."
+        
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            print(f"\n🔄 Confirmation attempt {attempt + 1}/{max_attempts}")
+            
+            response = get_yes_no_confirmation(confirmation_question, timeout=15)
+            
+            if response is True:
+                print("✅ Destination confirmed!")
+                say("Great! Starting navigation to " + destination)
+                return True
+            elif response is False:
+                print("❌ Destination not confirmed")
+                say("I understand. Please try again with a different destination.")
+                return False
+            else:
+                print("⚠️  Could not understand your response")
+                if attempt < max_attempts - 1:
+                    say("I didn't catch that. Please say yes or no.")
+                else:
+                    say("I'm having trouble understanding. Please try again later.")
+                    return False
+        
+        return False
+    
     def send_manual_location(self, latitude: float, longitude: float) -> bool:
         """
         Manually send location update (for testing)
@@ -254,9 +336,63 @@ class LaptopClient:
         """
         return self.current_location
     
+    def interactive_mode(self):
+        """
+        Interactive mode for voice input and testing
+        """
+        print("\n🎤 Interactive Mode - Voice Commands")
+        print("=" * 50)
+        print("Available commands:")
+        print("1. Get destination by voice")
+        print("2. Send test location")
+        print("3. Send test voice command")
+        print("4. Exit interactive mode")
+        
+        while True:
+            try:
+                choice = input("\nEnter choice (1-4): ").strip()
+                
+                if choice == "1":
+                    destination = self.get_destination_by_voice()
+                    if destination:
+                        if self.confirm_destination(destination):
+                            print(f"✅ Destination confirmed: {destination}")
+                            # Send navigation request to Pi
+                            self.firebase.send_navigation_command(destination, self.current_location or (0, 0))
+                        else:
+                            print("❌ Destination not confirmed")
+                    else:
+                        print("❌ Could not get destination")
+                
+                elif choice == "2":
+                    if self.current_location:
+                        success = self.send_manual_location(*self.current_location)
+                        print(f"📍 Test location sent: {'Success' if success else 'Failed'}")
+                    else:
+                        print("❌ No current location available")
+                
+                elif choice == "3":
+                    text = input("Enter text to send as voice command: ").strip()
+                    if text:
+                        success = self.firebase.send_voice_command(text)
+                        print(f"🎤 Test voice command sent: {'Success' if success else 'Failed'}")
+                
+                elif choice == "4":
+                    print("👋 Exiting interactive mode")
+                    break
+                
+                else:
+                    print("❌ Invalid choice. Please enter 1-4.")
+                    
+            except KeyboardInterrupt:
+                print("\n👋 Exiting interactive mode")
+                break
+            except Exception as e:
+                print(f"❌ Error in interactive mode: {e}")
+    
     def stop_client(self) -> None:
-        """Stop the Laptop Client service"""
-        print("\n🛑 Stopping HINT Laptop Client...")
+        """Stop the Enhanced Laptop Client service"""
+        print("\n🛑 Stopping Enhanced HINT Laptop Client...")
         self.is_running = False
         
         # Wait for threads to finish
@@ -272,21 +408,30 @@ class LaptopClient:
         # Close Firebase connection
         self.firebase.close()
         
-        print("✅ HINT Laptop Client stopped")
+        print("✅ Enhanced HINT Laptop Client stopped")
 
 def main():
-    """Main function for Laptop Client"""
-    print("💻 HINT Laptop Client")
+    """Main function for Enhanced Laptop Client"""
+    print("💻 Enhanced HINT Laptop Client")
     print("=" * 50)
     
     # Create and start client
-    client = LaptopClient()
+    client = EnhancedLaptopClient()
     
     if not client.start_client():
         print("❌ Failed to start client")
         sys.exit(1)
     
     try:
+        # Check if user wants interactive mode
+        print("\nWould you like to enter interactive mode? (y/N): ", end="")
+        try:
+            choice = input().strip().lower()
+            if choice == 'y':
+                client.interactive_mode()
+        except (KeyboardInterrupt, EOFError):
+            print("\nContinuing in background mode...")
+        
         # Keep running until interrupted
         while True:
             time.sleep(1)
