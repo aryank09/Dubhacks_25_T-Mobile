@@ -17,19 +17,22 @@ import platform
 class TextMaps:
     """Text-based navigation system using OpenStreetMap and OSRM"""
     
-    def __init__(self, mode='walking'):
+    def __init__(self):
         """
-        Initialize TextMaps
-        
-        Args:
-            mode: Transportation mode - 'walking', 'driving', 'cycling'
+        Initialize TextMaps - Permanently set to walking mode
         """
         self.nominatim_url = "https://nominatim.openstreetmap.org/search"
-        self.mode = mode
-        self.osrm_url = f"http://router.project-osrm.org/route/v1/{mode}"
+        self.mode = 'walking'
+        
+        # Use driving profile but we'll recalculate time for walking
+        # Public OSRM server doesn't have foot profile available
+        self.osrm_url = "http://router.project-osrm.org/route/v1/driving"
         self.headers = {
             'User-Agent': 'TextMaps/1.0'
         }
+        
+        # Average walking speed in meters per second (5 km/h = 1.39 m/s)
+        self.walking_speed = 1.39
     
     def get_current_location_from_browser(self) -> Optional[Tuple[float, float]]:
         """
@@ -185,6 +188,18 @@ class TextMaps:
             print(f"Error geocoding address: {e}")
             return None
     
+    def calculate_walking_time(self, distance_meters: float) -> float:
+        """
+        Calculate walking time in seconds based on distance
+        
+        Args:
+            distance_meters: Distance in meters
+            
+        Returns:
+            Time in seconds at average walking speed
+        """
+        return distance_meters / self.walking_speed
+    
     def get_route(self, start_coords: Tuple[float, float], 
                   end_coords: Tuple[float, float]) -> Optional[Dict]:
         """
@@ -214,6 +229,17 @@ class TextMaps:
             data = response.json()
             
             if data['code'] == 'Ok':
+                # Recalculate duration for walking speed
+                for route in data['routes']:
+                    distance = route['distance']
+                    route['duration'] = self.calculate_walking_time(distance)
+                    
+                    # Also update duration for each leg and step
+                    for leg in route['legs']:
+                        leg['duration'] = self.calculate_walking_time(leg['distance'])
+                        for step in leg['steps']:
+                            step['duration'] = self.calculate_walking_time(step['distance'])
+                
                 return data
             else:
                 return None
@@ -302,6 +328,101 @@ class TextMaps:
         dist_text = self.format_distance(distance)
         
         return f"{step_num}. {icon} {text} ({dist_text})"
+    
+    def get_directions_text(self, start_address: str, end_address: str) -> Optional[str]:
+        """
+        Get turn-by-turn directions as text (for TTS)
+        
+        Args:
+            start_address: Starting location (or "current" for current location)
+            end_address: Destination (or "current" for current location)
+            
+        Returns:
+            String containing all directions, or None if error
+        """
+        # Geocode addresses
+        print("🔍 Finding locations...")
+        
+        # Handle current location for start
+        if start_address.lower() in ['current', 'current location', 'my location', 'here']:
+            print("📍 Detecting your current location...")
+            start_coords = self.get_current_location()
+            if not start_coords:
+                print(f"❌ Could not detect current location. Please enter an address instead.")
+                return None
+            print(f"✓ Current location detected!")
+        else:
+            start_coords = self.geocode(start_address)
+            if not start_coords:
+                print(f"❌ Could not find starting location: {start_address}")
+                return None
+        
+        # Handle current location for destination
+        if end_address.lower() in ['current', 'current location', 'my location', 'here']:
+            print("📍 Detecting your current location...")
+            end_coords = self.get_current_location()
+            if not end_coords:
+                print(f"❌ Could not detect current location. Please enter an address instead.")
+                return None
+            print(f"✓ Current location detected!")
+        else:
+            end_coords = self.geocode(end_address)
+            if not end_coords:
+                print(f"❌ Could not find destination: {end_address}")
+                return None
+        
+        print(f"✓ Start: {start_coords[0]:.4f}, {start_coords[1]:.4f}")
+        print(f"✓ End: {end_coords[0]:.4f}, {end_coords[1]:.4f}\n")
+        
+        # Get route
+        print("🗺️  Calculating route...\n")
+        route_data = self.get_route(start_coords, end_coords)
+        
+        if not route_data or not route_data.get('routes'):
+            print("❌ Could not find a route between these locations")
+            return None
+        
+        route = route_data['routes'][0]
+        total_distance = route['distance']
+        total_duration = route['duration']
+        
+        # Build text for TTS
+        directions_text = f"Here are your walking directions. "
+        directions_text += f"Total distance is {self.format_distance(total_distance)}. "
+        directions_text += f"Estimated time is {self.format_duration(total_duration)}. "
+        directions_text += "Now, turn by turn directions. "
+        
+        # Add turn-by-turn directions
+        steps = route['legs'][0]['steps']
+        for i, step in enumerate(steps, 1):
+            maneuver = step['maneuver']
+            distance = step['distance']
+            direction_type = maneuver['type']
+            modifier = maneuver.get('modifier', '')
+            instruction = step.get('name', 'the road')
+            
+            # Format for speech (no icons)
+            if direction_type == 'depart':
+                text = f"Step {i}. Head {modifier} on {instruction} for {self.format_distance(distance)}. "
+            elif direction_type == 'arrive':
+                text = f"Step {i}. Arrive at your destination. "
+            elif direction_type == 'turn':
+                text = f"Step {i}. Turn {modifier} onto {instruction} and continue for {self.format_distance(distance)}. "
+            elif direction_type == 'merge':
+                text = f"Step {i}. Merge {modifier} onto {instruction} for {self.format_distance(distance)}. "
+            elif direction_type == 'roundabout':
+                exit_num = maneuver.get('exit', 1)
+                text = f"Step {i}. At roundabout, take exit {exit_num} onto {instruction} for {self.format_distance(distance)}. "
+            elif direction_type == 'fork':
+                text = f"Step {i}. At fork, keep {modifier} onto {instruction} for {self.format_distance(distance)}. "
+            else:
+                text = f"Step {i}. {direction_type.replace('_', ' ').title()} {modifier} onto {instruction} for {self.format_distance(distance)}. "
+            
+            directions_text += text
+        
+        directions_text += "You have arrived at your destination!"
+        
+        return directions_text
     
     def print_directions(self, start_address: str, end_address: str):
         """
@@ -574,8 +695,7 @@ def main():
     print("🚶 TEXT MAPS - Walking Navigation System")
     print("="*60 + "\n")
     
-    # Check for mode argument
-    mode = 'walking'  # Default to walking
+    # Permanently set to walking mode
     live_mode = False
     update_interval = 5
     args = sys.argv[1:]
@@ -596,22 +716,7 @@ def main():
                 print("❌ Invalid interval value")
                 return
     
-    # Check if user specified a mode
-    if '--mode' in args:
-        mode_idx = args.index('--mode')
-        if mode_idx + 1 < len(args):
-            mode = args[mode_idx + 1]
-            # Remove mode arguments
-            args = args[:mode_idx] + args[mode_idx + 2:]
-    
-    # Validate mode
-    valid_modes = ['walking', 'driving', 'cycling']
-    if mode not in valid_modes:
-        print(f"❌ Invalid mode: {mode}")
-        print(f"Valid modes: {', '.join(valid_modes)}")
-        return
-    
-    navigator = TextMaps(mode=mode)
+    navigator = TextMaps()
     
     # Live navigation mode
     if live_mode:
