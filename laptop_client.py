@@ -66,9 +66,6 @@ class LaptopClient:
     
     def _location_tracking_loop(self) -> None:
         """Background loop to track and send location updates"""
-        last_sent_location = None
-        location_failures = 0
-        
         while self.is_running:
             try:
                 # Get current location
@@ -78,36 +75,15 @@ class LaptopClient:
                     lat, lng = current_location
                     self.current_location = current_location
                     
-                    # Only send if location changed significantly (more than 10 meters)
-                    should_send = True
-                    if last_sent_location:
-                        from text_maps import TextMaps
-                        temp_nav = TextMaps()
-                        distance = temp_nav.calculate_distance(last_sent_location, current_location)
-                        should_send = distance > 10  # Only send if moved more than 10 meters
+                    # Send location to Firebase
+                    success = self.firebase.send_location_update(lat, lng)
                     
-                    if should_send:
-                        # Send location to Firebase
-                        success = self.firebase.send_location_update(lat, lng)
-                        
-                        if success:
-                            print(f"📍 Location sent: {lat:.4f}, {lng:.4f}")
-                            last_sent_location = current_location
-                            location_failures = 0
-                        else:
-                            print("⚠️  Failed to send location")
-                            location_failures += 1
+                    if success:
+                        print(f"📍 Location sent: {lat:.4f}, {lng:.4f}")
                     else:
-                        print(f"📍 Location unchanged: {lat:.4f}, {lng:.4f}")
+                        print("⚠️  Failed to send location")
                 else:
                     print("⚠️  Could not get current location")
-                    location_failures += 1
-                    
-                    # If we've failed too many times, increase the interval
-                    if location_failures > 5:
-                        print("⚠️  Multiple location failures, increasing interval...")
-                        time.sleep(30)  # Wait 30 seconds before trying again
-                        continue
                 
                 # Wait for next update
                 time.sleep(self.update_interval)
@@ -202,11 +178,6 @@ class LaptopClient:
         text = data.get('text', '')
         
         if text:
-            # Skip test commands to avoid spam
-            if "test" in text.lower() and "firebase" in text.lower():
-                print(f"\n🎤 Test Voice Command (skipped): {text}")
-                return
-                
             print(f"\n🎤 Voice Command: {text}")
             
             # Speak the command
