@@ -1,262 +1,232 @@
-# Navigation Assistant for the Blind
+# Text Maps - Text-Based Navigation System
 
-An AI-powered navigation system designed for blind users, running on Raspberry Pi with Bluetooth audio, GPS navigation, and camera-based obstacle detection.
+A command-line navigation tool that works like Google Maps but provides directions through text instead of showing maps. Get turn-by-turn walking directions for any route!
 
 ## Features
 
-- 🎤 **Voice Control**: Hands-free interaction using speech recognition
-- 🔊 **Text-to-Speech**: Clear audio feedback via Bluetooth headphones/speakers
-- 🤖 **AI Assistant**: Conversational AI powered by OpenAI GPT or Anthropic Claude
-- 🗺️ **GPS Navigation**: Real-time location tracking and turn-by-turn directions
-- 📷 **Obstacle Detection**: Camera-based detection of obstacles and scene description
-- 📡 **Bluetooth Audio**: Wireless audio output support
-
-## Hardware Requirements
-
-- **Raspberry Pi 4** (recommended) or Raspberry Pi 3B+
-- **Raspberry Pi Camera Module** or USB webcam
-- **USB GPS Module** (e.g., VK-172, BU-353S4)
-- **Bluetooth Headphones** or Bluetooth speaker
-- **USB Microphone** or USB audio adapter with microphone
-- **Power bank** (for portable use)
-- **SD Card** (16GB minimum, 32GB recommended)
-
-## Software Requirements
-
-- **Raspberry Pi OS** (Bullseye or newer)
-- **Python 3.7+**
-- Internet connection (for initial setup and AI features)
+- 🚶 **Walking-focused** - Optimized for pedestrian navigation (default mode)
+- 🧭 **Live Navigation** - Real-time turn-by-turn directions based on your current location
+- 🗺️ **Turn-by-turn directions** - Clear, step-by-step navigation instructions
+- 📍 **Address geocoding** - Enter any address or place name
+- 📍 **Current location tracking** - Automatically detects and updates your position
+- 📊 **Route summary** - Total distance and estimated travel time
+- 🎯 **Smart step detection** - Automatically advances to the next instruction as you move
+- 🧭 **Direction indicators** - Visual arrows and icons for each turn
+- 🌍 **Global coverage** - Works anywhere in the world using OpenStreetMap data
+- 🚴 **Multiple modes** - Supports walking (default), driving, and cycling
 
 ## Installation
 
-### On Your Laptop (Development)
+1. Make sure you have Python 3.7+ installed
+2. Install dependencies:
 
-1. Clone the repository:
-```bash
-git clone <your-repo-url>
-cd Dubhacks_25_T-Mobile
-```
-
-2. Install dependencies (for testing):
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Create `.env` file:
-```bash
-cp .env.example .env
-# Edit .env and add your API keys
-```
-
-### On Raspberry Pi
-
-1. **Transfer files to Raspberry Pi:**
-
-   Option A - Using SD Card:
-   ```bash
-   # On your laptop, copy entire project folder to SD card
-   # Then insert SD card into Raspberry Pi
-   ```
-
-   Option B - Using SSH:
-   ```bash
-   # From your laptop
-   scp -r /Users/aryankhanna/Documents/GitHub/Dubhacks_25_T-Mobile pi@raspberrypi.local:~/
-   ```
-
-   Option C - Using Git:
-   ```bash
-   # On Raspberry Pi
-   cd ~
-   git clone <your-repo-url>
-   cd Dubhacks_25_T-Mobile
-   ```
-
-2. **Run installation script:**
-```bash
-cd ~/Dubhacks_25_T-Mobile
-chmod +x install.sh
-./install.sh
-```
-
-3. **Configure API Keys:**
-```bash
-nano .env
-# Add your OpenAI or Anthropic API key
-```
-
-4. **Pair Bluetooth Audio Device:**
-```bash
-bluetoothctl
-# In bluetoothctl:
-scan on
-# Wait for your device to appear
-pair [DEVICE_MAC_ADDRESS]
-trust [DEVICE_MAC_ADDRESS]
-connect [DEVICE_MAC_ADDRESS]
-exit
-```
-
 ## Usage
 
-### Basic Usage
+### Interactive Mode
 
-Start the navigation assistant:
-```bash
-python3 main.py
-```
-
-### Command Examples
-
-Once running, you can say:
-
-- **"Where am I?"** - Get current location
-- **"Navigate to Starbucks"** - Start navigation to a destination
-- **"What's ahead?"** - Describe obstacles and scene
-- **"Find the nearest bus stop"** - Search for nearby places
-- **"Continue navigation"** - Get next turn-by-turn instruction
-- **"Help"** - Learn what the assistant can do
-- **"Stop"** or **"Goodbye"** - Exit the application
-
-### Run Options
+Simply run the program and enter your locations when prompted:
 
 ```bash
-# Run without Bluetooth (use built-in audio)
-python3 main.py --no-bluetooth
-
-# Run without camera (disable obstacle detection)
-python3 main.py --no-camera
-
-# Run with both disabled
-python3 main.py --no-bluetooth --no-camera
+python text_maps.py
 ```
 
-### Auto-Start at Boot
+Example:
+```
+Starting location: Seattle, WA
+Destination: Portland, OR
+```
 
-If you configured the systemd service during installation:
+### Command Line Mode
+
+Pass the starting location and destination as arguments:
+
 ```bash
-sudo systemctl start nav-assistant    # Start now
-sudo systemctl stop nav-assistant     # Stop
-sudo systemctl restart nav-assistant  # Restart
-sudo systemctl status nav-assistant   # Check status
+python text_maps.py "Seattle, WA" "Portland, OR"
 ```
 
-## Project Structure
-
-```
-Dubhacks_25_T-Mobile/
-├── main.py                 # Main application entry point
-├── voice_assistant.py      # Speech recognition and TTS
-├── ai_brain.py            # AI conversation handler
-├── navigation_system.py   # GPS and routing logic
-├── obstacle_detection.py  # Camera-based obstacle detection
-├── bluetooth_handler.py   # Bluetooth device management
-├── requirements.txt       # Python dependencies
-├── install.sh            # Raspberry Pi installation script
-├── .env.example          # Environment variables template
-└── README.md             # This file
-```
-
-## API Keys
-
-This project supports two AI providers:
-
-### OpenAI (GPT)
-1. Sign up at https://platform.openai.com/
-2. Create an API key
-3. Add to `.env`: `OPENAI_API_KEY=your_key_here`
-4. Set `AI_SERVICE=openai` in `.env`
-
-### Anthropic (Claude)
-1. Sign up at https://www.anthropic.com/
-2. Create an API key
-3. Add to `.env`: `ANTHROPIC_API_KEY=your_key_here`
-4. Set `AI_SERVICE=anthropic` in `.env`
-
-## Troubleshooting
-
-### No Audio Output
-- Check Bluetooth connection: `bluetoothctl devices Connected`
-- Test speaker: `speaker-test -t wav -c 2`
-- Restart PulseAudio: `pulseaudio --kill && pulseaudio --start`
-
-### Microphone Not Working
-- List audio devices: `arecord -l`
-- Test recording: `arecord -d 5 test.wav && aplay test.wav`
-- Check permissions: `sudo usermod -a -G audio $USER`
-
-### GPS Not Working
-- Check GPS status: `cgps -s`
-- View raw GPS data: `cat /dev/ttyUSB0` or `cat /dev/ttyACM0`
-- Restart GPS daemon: `sudo systemctl restart gpsd`
-
-### Camera Not Working
-- Test Pi Camera: `libcamera-hello --list-cameras`
-- Test USB camera: `ls /dev/video*`
-- Check camera permissions: `sudo usermod -a -G video $USER`
-
-### AI Not Responding
-- Check internet connection: `ping google.com`
-- Verify API key in `.env` file
-- Check API quota/balance on provider website
-
-## Development
-
-### Testing Individual Components
-
-Test Bluetooth:
 ```bash
-python3 bluetooth_handler.py
+python text_maps.py "1600 Amphitheatre Parkway, Mountain View, CA" "1 Apple Park Way, Cupertino, CA"
 ```
 
-Test Voice Assistant:
+### Using Current Location
+
+You can use `current` (or `current location`, `my location`, `here`) to navigate from or to your current location:
+
 ```bash
-python3 voice_assistant.py
+# Navigate from current location to a destination
+python text_maps.py "current" "Space Needle, Seattle"
 ```
 
-Test Navigation:
 ```bash
-python3 navigation_system.py
+# Navigate from an address to your current location
+python text_maps.py "Pike Place Market, Seattle" "current"
 ```
 
-Test Obstacle Detection:
 ```bash
-python3 obstacle_detection.py
+# Interactive mode - just type "current" when prompted
+python text_maps.py
+Starting location: current
+Destination: Starbucks Reserve Roastery, Seattle
 ```
 
-Test AI Brain:
+**Note:** Current location detection uses IP-based geolocation, which provides city-level accuracy. For more precise location, you can enter your specific address.
+
+### Changing Transportation Mode
+
+By default, the program provides **walking directions**. You can change the mode using the `--mode` flag:
+
 ```bash
-python3 ai_brain.py
+# Walking directions (default)
+python text_maps.py "Pike Place Market" "Space Needle"
+
+# Driving directions
+python text_maps.py --mode driving "Seattle, WA" "Portland, OR"
+
+# Cycling directions
+python text_maps.py --mode cycling "University of Washington" "Downtown Seattle"
 ```
+
+Available modes:
+- `walking` (default) - Pedestrian routes, sidewalks, and footpaths
+- `driving` - Car routes on roads and highways
+- `cycling` - Bicycle-friendly routes
+
+### Live Navigation Mode 🧭
+
+The **live navigation mode** continuously tracks your location and provides real-time turn-by-turn directions as you move!
+
+```bash
+# Start live navigation to a destination
+python text_maps.py --live "Space Needle, Seattle"
+
+# Live navigation with custom update interval (default: 5 seconds)
+python text_maps.py --live --interval 10 "Pike Place Market"
+
+# Live navigation with driving mode
+python text_maps.py --live --mode driving "Portland, OR"
+```
+
+**How it works:**
+1. 📍 Detects your current location automatically
+2. 🗺️ Calculates the route to your destination
+3. 🧭 Shows you the current instruction based on where you are
+4. ⏭️ Automatically advances to the next instruction as you move
+5. 📏 Displays distance to next turn and to destination
+6. 🎯 Alerts you when you've arrived (within 20 meters)
+
+**Live Navigation Display:**
+```
+📍 Current Position: 47.6094, -122.3414
+📏 Distance to destination: 1.5 km
+📏 Distance to next turn: 150 meters
+
+🧭 CURRENT INSTRUCTION:
+2. → Turn right onto Virginia Street (389 meters)
+
+⏭️  NEXT:
+3. ← Turn left onto 4th Avenue (854 meters)
+```
+
+Press `Ctrl+C` to stop navigation at any time.
+
+**Note:** Location updates every 5 seconds by default (adjustable with `--interval`).
+
+### GPS Location Accuracy
+
+The program now uses **browser-based GPS** for precise location tracking:
+
+1. **First run**: Opens your browser to request GPS permission
+2. **High accuracy**: Uses HTML5 Geolocation API (same as Google Maps)
+3. **Automatic fallback**: If GPS unavailable, uses IP-based location (city-level accuracy)
+
+When you start live navigation, a browser window will open asking for location permission. Allow it for precise GPS tracking!
+
+## Example Output
+
+```
+============================================================
+🗺️  TEXT MAPS - Text-Based Navigation System
+============================================================
+
+============================================================
+Getting directions from:
+  📍 Seattle, WA
+to:
+  📍 Portland, OR
+============================================================
+
+🔍 Finding locations...
+✓ Start: 47.6062, -122.3321
+✓ End: 45.5152, -122.6784
+
+🗺️  Calculating route...
+
+============================================================
+📊 ROUTE SUMMARY
+============================================================
+Total Distance: 278.5 km
+Estimated Time: 2 hours 54 min
+============================================================
+
+============================================================
+🧭 TURN-BY-TURN DIRECTIONS
+============================================================
+
+1. 🚗 Start by heading south on 5th Avenue (150 meters)
+
+2. → Turn right onto James Street (800 meters)
+
+3. ⤴ Merge onto I-5 South (275.3 km)
+
+4. → Turn right onto Broadway Street (1.2 km)
+
+5. 🏁 Arrive at your destination (0 meters)
+
+============================================================
+✅ You have arrived at your destination!
+============================================================
+```
+
+## How It Works
+
+1. **Geocoding**: Converts your address/place name to GPS coordinates using OpenStreetMap's Nominatim service
+2. **Routing**: Calculates the optimal route using OSRM (Open Source Routing Machine)
+3. **Formatting**: Presents the route as clear, numbered turn-by-turn instructions with distance and time information
+
+## Technical Details
+
+- Uses **OpenStreetMap** for geocoding (free, no API key required)
+- Uses **OSRM** for routing calculations (free, no API key required)
+- No rate limits for reasonable personal use
+- Works offline if you set up your own OSRM server
+
+## Limitations
+
+- Requires internet connection (uses public APIs)
+- Currently optimized for driving directions
+- May have rate limits if used excessively
 
 ## Future Enhancements
 
-- [ ] Advanced object detection using YOLO or similar models
-- [ ] Offline AI using local LLMs (Llama, Mistral)
-- [ ] Multi-language support
-- [ ] Indoor navigation using Bluetooth beacons
-- [ ] Emergency SOS feature
-- [ ] Route history and favorites
-- [ ] Integration with public transit APIs
-- [ ] Haptic feedback support
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Potential features to add:
+- Walking, cycling, and public transit directions
+- Alternative routes
+- Real-time traffic information
+- Save favorite locations
+- Export directions to text file
+- Voice output for hands-free navigation
 
 ## License
 
-MIT License - feel free to use this project for any purpose.
+Open source - feel free to use and modify!
 
-## Acknowledgments
+## Credits
 
-Built for DubHacks 2025 with ❤️ for the visually impaired community.
-
-## Support
-
-For issues or questions, please open an issue on GitHub or contact the development team.
-
----
-
-**Safety Notice**: This navigation assistant is designed to aid navigation but should not replace traditional mobility aids like white canes or guide dogs. Always prioritize safety and use multiple navigation tools.
+- OpenStreetMap for map data
+- OSRM for routing engine
+- Nominatim for geocoding service
 
