@@ -20,6 +20,12 @@ A command-line navigation tool that works like Google Maps but provides directio
 1. Make sure you have Python 3.7+ installed
 2. Install dependencies:
 
+# Installation notes:
+#for raspberry pi: because its externally manager and debian you need virtual env for python
+# For macOS: brew install portaudio (required for pyaudio)
+# Then: pip install -r requirements.txt
+
+
 ```bash
 pip install -r requirements.txt
 ```
