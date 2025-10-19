@@ -1,11 +1,11 @@
 requests>=2.31.0
 geocoder>=1.38.1
 
-#TTS and README
-ollama>=0.1.0
+#TTS and Speech Recognition
 pyttsx3>=2.90
 pyaudio>=0.2.11
-#brew install portaudio
-#pip install -r requirements.txt
-#curl -fsSL https://www.ollama.com/install.sh | sh
-#ollama pull gemma.3:1b
+SpeechRecognition>=3.10.0
+
+# Installation notes:
+# For macOS: brew install portaudio (required for pyaudio)
+# Then: pip install -r requirements.txt
