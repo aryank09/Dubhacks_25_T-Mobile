@@ -249,6 +249,7 @@ def main():
     else:
         print(f"🌐 Using default server URL: {server_url}")
         print("   (You can specify a custom URL as an argument)")
+        print("   Example: python gps_sender.py http://192.168.1.100:5000")
     
     # Create GPS sender
     gps_sender = GPSSender(server_url)

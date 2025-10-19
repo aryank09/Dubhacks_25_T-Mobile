@@ -124,6 +124,19 @@ class GPSServer:
         age = time.time() - self.last_update
         return age <= max_age_seconds
     
+    def get_local_ip(self) -> str:
+        """Get the local IP address of this device"""
+        import socket
+        try:
+            # Connect to a remote address to get local IP
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except:
+            return "localhost"
+
     def run(self, host: str = '0.0.0.0', debug: bool = False):
         """
         Run the GPS server
@@ -132,12 +145,16 @@ class GPSServer:
             host: Host to bind to (0.0.0.0 for all interfaces)
             debug: Enable Flask debug mode
         """
+        # Get the actual IP address for display
+        actual_ip = self.get_local_ip()
+        
         print(f"\n{'='*60}")
         print(f"🌐 GPS SERVER STARTING")
         print(f"{'='*60}")
         print(f"🖥️  Raspberry Pi GPS Server")
-        print(f"🌐 Server URL: http://{host}:{self.port}")
+        print(f"🌐 Server URL: http://{actual_ip}:{self.port}")
         print(f"📡 Waiting for GPS coordinates from computer...")
+        print(f"💡 Computer should connect to: http://{actual_ip}:{self.port}")
         print(f"{'='*60}\n")
         
         try:

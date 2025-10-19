@@ -30,22 +30,13 @@ python setup_gps_system.py
 
 ### 3. Manual Setup
 
-#### On Computer (GPS Sender):
-
-```bash
-# Send GPS to default server (localhost:5000)
-python gps_sender.py
-
-# Send GPS to custom server
-python gps_sender.py http://RASPBERRY_PI_IP:5000
-```
-
 #### On Raspberry Pi (GPS Server):
 
 Terminal 1 - Start GPS server:
 ```bash
 python gps_server.py
 ```
+**Note**: The server will display its IP address when it starts (e.g., `http://192.168.1.100:5000`)
 
 Terminal 2 - Start navigation with server GPS:
 ```bash
@@ -53,8 +44,20 @@ Terminal 2 - Start navigation with server GPS:
 python main.py --server-gps
 
 # Use custom server URL
-python main.py --server-gps --server-url http://localhost:5000
+python main.py --server-gps --server-url http://192.168.1.100:5000
 ```
+
+#### On Computer (GPS Sender):
+
+```bash
+# Send GPS to Raspberry Pi server
+python gps_sender.py http://RASPBERRY_PI_IP:5000
+
+# Example:
+python gps_sender.py http://192.168.1.100:5000
+```
+
+**Important**: Replace `RASPBERRY_PI_IP` with the actual IP address shown when you start the GPS server.
 
 ## Files Overview
 
@@ -72,11 +75,13 @@ python main.py --server-gps --server-url http://localhost:5000
    ```bash
    python gps_server.py
    ```
+   Note the IP address displayed (e.g., `http://192.168.1.100:5000`)
 
 2. **Start GPS sender on computer:**
    ```bash
-   python gps_sender.py
+   python gps_sender.py http://192.168.1.100:5000
    ```
+   (Replace with the actual Raspberry Pi IP)
 
 3. **Start navigation on Raspberry Pi:**
    ```bash
@@ -89,12 +94,18 @@ python main.py --server-gps --server-url http://localhost:5000
 If the Raspberry Pi has a different IP address:
 
 ```bash
-# On computer
+# On computer (use the IP shown by the server)
 python gps_sender.py http://192.168.1.100:5000
 
 # On Raspberry Pi
 python main.py --server-gps --server-url http://192.168.1.100:5000 "123 Main Street"
 ```
+
+#### Network Discovery
+If you don't know the Raspberry Pi's IP address:
+
+1. Run `python gps_server.py` on Raspberry Pi - it will show the IP
+2. Or run `python setup_gps_system.py` on each device to see IP addresses
 
 #### Network Setup
 For different network configurations, update the server URL in both scripts.

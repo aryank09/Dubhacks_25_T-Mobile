@@ -11,6 +11,18 @@ import requests
 from typing import Optional
 
 
+def get_local_ip():
+    """Get the local IP address of this device"""
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except:
+        return "localhost"
+
 def check_dependencies():
     """Check if required dependencies are installed"""
     print("🔍 Checking dependencies...")
@@ -103,18 +115,24 @@ def setup_computer():
     print("🖥️  COMPUTER SETUP")
     print("="*60)
     
+    # Get current device IP
+    current_ip = get_local_ip()
+    
+    print(f"\n📍 Your computer's IP: {current_ip}")
     print("\nTo send GPS coordinates from your computer:")
     print("\n1. Make sure the Raspberry Pi GPS server is running")
-    print("2. Run the GPS sender:")
-    print("   python gps_sender.py")
-    print("\n   Or with custom server URL:")
+    print("2. Get the Raspberry Pi's IP address (it will be shown when you start the server)")
+    print("3. Run the GPS sender:")
     print("   python gps_sender.py http://RASPBERRY_PI_IP:5000")
+    print("\n   Example:")
+    print("   python gps_sender.py http://192.168.1.100:5000")
     
     print("\n📝 Notes:")
     print("- The script will open a browser to get your GPS location")
     print("- Allow location access when prompted")
     print("- The script will continuously send your location to the server")
     print("- Press Ctrl+C to stop")
+    print(f"- Make sure both devices are on the same network")
 
 
 def setup_raspberry_pi():
@@ -123,28 +141,34 @@ def setup_raspberry_pi():
     print("🍓 RASPBERRY PI SETUP")
     print("="*60)
     
+    # Get current device IP
+    current_ip = get_local_ip()
+    
+    print(f"\n📍 Your Raspberry Pi's IP: {current_ip}")
     print("\nTo run the GPS server and navigation on Raspberry Pi:")
     print("\n1. Start the GPS server (in one terminal):")
     print("   python gps_server.py")
+    print("   (The server will show its IP address when it starts)")
     
     print("\n2. Start navigation with server GPS (in another terminal):")
     print("   python main.py --server-gps")
     print("\n   Or with custom server URL:")
-    print("   python main.py --server-gps --server-url http://localhost:5000")
+    print(f"   python main.py --server-gps --server-url http://{current_ip}:5000")
     
     print("\n📝 Notes:")
     print("- The server will wait for GPS coordinates from the computer")
     print("- The navigation will use coordinates from the server")
     print("- Make sure both are running before starting navigation")
+    print(f"- Tell the computer to connect to: http://{current_ip}:5000")
     
     print("\n" + "="*60)
     print("TESTING CONNECTION")
     print("="*60)
     
     # Test server connection
-    server_url = input("\nEnter server URL (default: http://localhost:5000): ").strip()
+    server_url = input(f"\nEnter server URL (default: http://{current_ip}:5000): ").strip()
     if not server_url:
-        server_url = "http://localhost:5000"
+        server_url = f"http://{current_ip}:5000"
     
     print(f"\n🔗 Testing connection to {server_url}...")
     if test_server_connection(server_url):
