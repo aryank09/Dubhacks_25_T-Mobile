@@ -11,5 +11,10 @@ SpeechRecognition>=3.10.0
 #for raspberry pi: because its externally manager and debian you need virtual env for python
 # For macOS: brew install portaudio (required for pyaudio)
 # Then: pip install -r requirements.txt
+#ON LINUX:
 #ollama linux: curl -fsSL https://ollama.com/install.sh | sh
 #ollama pull gemma:2b
+#in the env add pip3 install ollama
+#brew install eSpeak (not needed for linux)
+#sudo apt-get update
+#sudo apt-get install flac espeak-ng espeak 
