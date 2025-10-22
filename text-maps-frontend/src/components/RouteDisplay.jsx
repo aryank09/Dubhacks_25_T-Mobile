@@ -1,16 +1,45 @@
+/**
+ * RouteDisplay - Route Results and Turn-by-Turn Directions Component
+ * 
+ * This component displays the calculated route with comprehensive turn-by-turn
+ * directions, route summary information, and voice guidance integration.
+ * It provides accessibility features for visually impaired users including
+ * voice announcements and step-by-step reading capabilities.
+ * 
+ * Key Features:
+ * - Route summary with distance, duration, and step count
+ * - Turn-by-turn directions with visual indicators
+ * - Voice guidance integration for accessibility
+ * - Step-by-step and continuous reading options
+ * - Error handling for malformed route data
+ * - Clear route functionality
+ */
+
 import React, { useEffect, useCallback } from 'react';
 // remove local hook import
 // import useVoiceGuidance from '../hooks/useVoiceGuidance';
 
+/**
+ * Route display component with voice guidance and accessibility features.
+ * 
+ * This component renders the complete route information including summary
+ * statistics, turn-by-turn directions, and voice guidance controls. It
+ * provides comprehensive accessibility features for visually impaired users.
+ * 
+ * @param {Object} props - Component props
+ * @param {Object} props.route - Route data containing start, end, and route information
+ * @param {Function} props.onClear - Callback to clear the current route
+ * @param {Object} props.voiceGuidance - Voice guidance controls and state
+ */
 const RouteDisplay = ({ route, onClear, voiceGuidance }) => {
-  // use the shared voiceGuidance object passed from App
+  // Use the shared voiceGuidance object passed from App
   const {
-    isEnabled = false,
-    announceRouteStart = () => {},
-    announceNavigation = () => {},
-    announceStatus = () => {},
-    readDirections = () => {},
-    readStepByStep = () => {}
+    isEnabled = false,              // Voice guidance enabled status
+    announceRouteStart = () => {}, // Announce route start
+    announceNavigation = () => {}, // Announce navigation instructions
+    announceStatus = () => {},     // Announce status messages
+    readDirections = () => {},     // Read full directions
+    readStepByStep = () => {}      // Read step-by-step directions
   } = voiceGuidance || {};
 
   const readAllDirections = useCallback(() => {
@@ -159,8 +188,10 @@ const RouteDisplay = ({ route, onClear, voiceGuidance }) => {
   };
 
   const getStepIcon = (step, index, totalSteps) => {
+    const mode = route?.mode || 'walking';
+    const startIcon = mode === 'walking' ? '🚶' : mode === 'cycling' ? '🚴' : '🚗';
     if (index === 0) {
-      return '🚗';
+      return startIcon;
     } else if (index === totalSteps - 1) {
       return '🏁';
     } else if (step.instruction.includes('Turn left')) {

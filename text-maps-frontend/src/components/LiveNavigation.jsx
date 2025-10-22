@@ -135,8 +135,10 @@ const LiveNavigation = ({ route, currentLocation, onStop, voiceGuidance }) => {
   }, [isNavigating]);
 
   const getStepIcon = (step, index, totalSteps) => {
+    const mode = route?.mode || 'walking';
+    const startIcon = mode === 'walking' ? '🚶' : mode === 'cycling' ? '🚴' : '🚗';
     if (index === 0) {
-      return '🚗';
+      return startIcon;
     } else if (index === totalSteps - 1) {
       return '🏁';
     } else if (step.instruction.includes('Turn left')) {

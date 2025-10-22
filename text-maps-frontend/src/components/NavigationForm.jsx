@@ -1,22 +1,55 @@
+/**
+ * NavigationForm - Main Navigation Input Component
+ * 
+ * This component provides the primary interface for users to input navigation
+ * requests with comprehensive accessibility features including voice input,
+ * voice guidance controls, and multiple transportation modes.
+ * 
+ * Key Features:
+ * - Voice input for hands-free address entry
+ * - Live navigation mode with GPS integration
+ * - Voice guidance controls and status
+ * - Multi-modal transportation support
+ * - Accessibility-optimized form controls
+ * - Real-time speech recognition feedback
+ */
+
 import React, { useState } from 'react';
 import useSpeechToText from '../hooks/useSpeechToText';
 
+/**
+ * Navigation form component with voice input and accessibility features.
+ * 
+ * This component provides a comprehensive navigation interface with voice
+ * input capabilities, live navigation mode, and voice guidance integration.
+ * It supports multiple transportation modes and provides real-time feedback
+ * for accessibility.
+ * 
+ * @param {Object} props - Component props
+ * @param {Function} props.onSubmit - Callback for regular route submission
+ * @param {Function} props.onLiveNavigation - Callback for live navigation
+ * @param {boolean} props.isLoading - Loading state indicator
+ * @param {string} props.error - Error message to display
+ * @param {Object} props.voiceGuidance - Voice guidance controls and state
+ */
 const NavigationForm = ({ onSubmit, onLiveNavigation, isLoading, error, voiceGuidance }) => {
+  // Form state management
   const [formData, setFormData] = useState({
-    start_address: '',
-    end_address: '',
-    mode: 'walking'
+    start_address: '',    // Starting location address
+    end_address: '',      // Destination address
+    mode: 'walking'       // Transportation mode
   });
-  const [liveDestination, setLiveDestination] = useState('');
-  const [liveMode, setLiveMode] = useState('walking');
-  const [activeVoiceField, setActiveVoiceField] = useState(null); // Track which field is being filled by voice
+  const [liveDestination, setLiveDestination] = useState('');        // Live navigation destination
+  const [liveMode, setLiveMode] = useState('walking');              // Live navigation mode
+  const [activeVoiceField, setActiveVoiceField] = useState(null);   // Track which field is being filled by voice
   
+  // Voice guidance integration
   const { 
-    isEnabled, 
-    setIsEnabled, 
-    announceError, 
-    announceStatus,
-    isSpeaking 
+    isEnabled,           // Voice guidance enabled status
+    setIsEnabled,       // Toggle voice guidance
+    announceError,       // Announce error messages
+    announceStatus,     // Announce status updates
+    isSpeaking          // Current speech status
   } = voiceGuidance;
 
   // Speech-to-text functionality
